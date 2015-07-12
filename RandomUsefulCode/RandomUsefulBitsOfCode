@@ -1,0 +1,101 @@
+Text manipulation that I find handy for files I work with:
+
+split -l NUMBER -d --additional-suffix=.fasta FILE
+#splits FILE into smaller files with NUMBER lines each and appends ".fasta" on each one
+
+awk '$3>=6' inputfile > outputfile
+#pulls rows with values greater than 6 in column 3 from inputfile and prints those to outputfile
+
+awk '$1<VALUE1' file | awk '$1>VALUE2' -
+#Finds all occurrences of values in between VALUE1 and VALUE2 in line 1 (hence $1) in file
+
+awk 'NR==NUMBER{print;exit}'
+#Print the NUMBER-th line in a file.
+
+awk '{ total += $1 } END { print total/NR }' FILE
+#Find the average of a column (here column 1 b/c $1 is given) in FILE - credit to http://stackoverflow.com/questions/3122442/how-do-i-calculate-the-mean-of-a-column
+
+sed 's/[_].*$//' INFILE> OUTFILE
+# Removes everything after the underscore in a file and prints to a new file
+
+awk '{ k=split($1,a,"CHARACTER");print a[k] }' INFILE > OUTFILE
+# Removes everything before a CHARACTER in INFILE and prints to OUTFILE
+
+sed -i 's/ThingToReplace/ThingYouReplaceWith/g' file
+# Classic find/replace
+
+grep -A1 'STRING' file
+# Prints the line that STRING occurs on and the line following it (good for pulling FASTA files apart using specific criteria in sequence names)
+#Use combo of -A# and -B# to pull apart fastq files as well
+
+awk 'NR%4 == 2 {lengths[length($0)]++} END {for (l in lengths) {print l, lengths[l]}}' FILE.fastq
+# Prints the read length followed by the number of reads at that length (fastq files)
+
+awk '{/>/&&++a||b+=length()}END{print b/a}' file.fasta
+# Prints average seq lengths (fasta)
+
+date +"%m/%d/%Y %H:%M:%S this finally finished"
+#Prints the timestamp followed by "this finally finished"
+
+tar -zxvf file.tar.gz
+# Unzip tar.gz file
+
+samtools view INFILEs.nodup.bam | awk '{OFS="\t"; print ">"$1"\n"$10}' - > INFILEs.fasta 
+#Conversion of sorted bam file to fasta following Gabriel's post on http://seqanswers.com/forums/archive/index.php/t-6169.html
+
+sed -e 's/\(^>.*$\)/#\1#/' INFILE1.fasta | tr -d "\r" | tr -d "\n" | sed -e 's/$/#/' | tr "#" "\n" | sed -e '/^$/d' > INFILE.0.fasta 
+#Removes word wrapping in Fasta formatted files. NEED TO FIND WHO I STOLE THIS FROM AND ADD IT HERE... SOMEWHERE ON BIOSTARS, I THINK
+
+grep --file=file1 file2 > file3 
+#using grep, find all lines containing fields in file1 in file2 and print them to a new file, file3
+# NOTE: You can add -Fx to grep to make it grep fixed strings and whole lines (i.e., exact matches only)
+
+grep --no-group-separator --no-filename *txt > file2
+#Gets rid of the "--" separator between hits in output files (and exludes which file they came from) in all *txt files and prints them to file2.
+
+apt-cache search <search_term>
+#Search term for Ubuntu packages that I always seem to forget... 
+
+"x=($(wc -l FILE.fasta))"
+#This makes an object 'x' that is the number of lines in a fasta file and echos this number
+
+y=($(grep ">" test.fasta | wc -l))
+#This makes an object y that is the number of sequences in a fasta file
+
+"x=1
+while [ $x -le $y ]
+do ..."
+#This is just an example of using the output of a wordcount as the input for the loop script below
+
+Useful loop script:
+#!/bin/bash
+x=1
+while [ $x -le 96 ] 
+do
+
+      string="sed -n ${x}p files"
+
+        str=$($string)
+
+        var=$(echo $str | awk -F"\t" '{print $1, $2}')
+        set -- $var
+        c1=$1 #the first variable (column 1 in files)
+	c2=$2 #second variable (column 2 in files) This script reads lines one at a time.
+
+COMMANDS ${c1}
+
+x=$(( $x + 1 ))
+
+done
+
+
+Useful loop for just numbers:
+
+for k in $(seq 13 10 63) #here: numbers 13 to 63 in intervals of 10
+
+do
+
+echo "$k" #commands, replacing $k with each successive number in your series.
+
+done
+
