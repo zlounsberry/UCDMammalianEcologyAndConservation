@@ -1,4 +1,12 @@
 #!/bin/bash
+
+#/home/zlounsbe/bin/stacks-1.31/process_radtags \
+#-P -p /home/zlounsbe/ArcticFox/raw_data/ \
+#-i gzfastq -E phred33 \
+#-o /home/zlounsbe/ArcticFox/Stacks/data/ \
+#-b /home/zlounsbe/ArcticFox/Stacks/barcodes.txt \
+#--inline_null -e sbfI -c -q -r
+
 #/home/zlounsbe/bin/stacks-1.31/clone_filter \
 #-1 /home/zlounsbe/ArcticFox/Stacks/data/AF-1031.1.fq.gz -2 /home/zlounsbe/ArcticFox/Stacks/data/AF-1031.2.fq.gz -i gzfastq -o /home/zlounsbe/ArcticFox/Stacks/NoClones
 
@@ -34,13 +42,6 @@
 
 #/home/zlounsbe/bin/stacks-1.31/clone_filter \
 #-1 /home/zlounsbe/ArcticFox/Stacks/data/AF-1122.1.fq.gz -2 /home/zlounsbe/ArcticFox/Stacks/data/AF-1122.2.fq.gz -i gzfastq -o /home/zlounsbe/ArcticFox/Stacks/NoClones
-
-#/home/zlounsbe/bin/stacks-1.31/process_radtags \
-#-P -p /home/zlounsbe/ArcticFox/raw_data/ \
-#-i gzfastq -E phred33 \
-#-o /home/zlounsbe/ArcticFox/Stacks/data/ \
-#-b /home/zlounsbe/ArcticFox/Stacks/barcodes.txt \
-#--inline_null -e sbfI -c -q -r
 
 #Use a larger --mem value for this step because it will kill at the default (during the population step)
 #perl /home/zlounsbe/bin/stacks-1.31/scripts/denovo_map.pl -m 7 \
