@@ -4,7 +4,7 @@
 
 
 W=($(wc -l samplefiles))
-GENE=$(echo "ENAM")
+GENE=$(echo "NODE")
 #THRESHOLD=$(echo "0.005") #ignore this for now...
 
 #samplefiles is a 2-column, tab delimited file containing your sample IDs in column 1 and the disease state in column 2 (either the disease name or the word 'control')
