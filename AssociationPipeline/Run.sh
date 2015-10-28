@@ -1,4 +1,5 @@
-#./bowtie.sh
+#./bowtie.sh # use this for Single End
+./bowtie_PE.sh # use this for paired end
 
 ############
 
