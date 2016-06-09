@@ -1,4 +1,7 @@
-Text manipulation that I find handy for files I work with:
+Text manipulation that I find handy for files I work with (last update 9 June 2016):
+
+for i in $(seq -w 01 1 016); do echo "$i"; done
+#This will pad a 0 in front of your letters in a sequence (good for when you get sequencing files back...)
 
 split -l NUMBER -d --additional-suffix=.fasta FILE
 #splits FILE into smaller files with NUMBER lines each and appends ".fasta" on each one
@@ -7,7 +10,7 @@ awk '$3>=6' inputfile > outputfile
 #pulls rows with values greater than 6 in column 3 from inputfile and prints those to outputfile
 
 awk '$1<VALUE1' file | awk '$1>VALUE2' -
-#Finds all occurrences of values in between VALUE1 and VALUE2 in line 1 (hence $1) in file
+#Finds all occurrences of values in between VALUE1 and VALUE2 in column 1 (hence $1) in file
 
 awk 'NR==NUMBER{print;exit}'
 #Print the NUMBER-th line in a file.
@@ -18,7 +21,7 @@ awk '{ total += $1 } END { print total/NR }' FILE
 sed 's/[_].*$//' INFILE> OUTFILE
 # Removes everything after the underscore in a file and prints to a new file
 
-awk '{ k=split($1,a,"CHARACTER");print a[k] }' INFILE > OUTFILE
+sed 's/^.*CHARACTER/CHARACTER/' INFILE> OUTFILE
 # Removes everything before a CHARACTER in INFILE and prints to OUTFILE
 
 sed -i 's/ThingToReplace/ThingYouReplaceWith/g' file
@@ -29,16 +32,16 @@ grep -A1 'STRING' file
 #Use combo of -A# and -B# to pull apart fastq files as well
 
 awk 'NR%4 == 2 {lengths[length($0)]++} END {for (l in lengths) {print l, lengths[l]}}' FILE.fastq
-# Prints the read length followed by the number of reads at that length (fastq files)
+# Prints the read length followed by the number of reads at that length (fastq files). Credit: https://www.biostars.org/p/72433/
 
 awk '{/>/&&++a||b+=length()}END{print b/a}' file.fasta
-# Prints average seq lengths (fasta)
+# Prints average seq lengths (fasta). Credit: https://www.biostars.org/p/1758/
 
 date +"%m/%d/%Y %H:%M:%S this finally finished"
 #Prints the timestamp followed by "this finally finished"
 
 tar -zxvf file.tar.gz
-# Unzip tar.gz file
+# Unzip tar.gz file (I'll never stop googling this).
 
 samtools view INFILEs.nodup.bam | awk '{OFS="\t"; print ">"$1"\n"$10}' - > INFILEs.fasta 
 #Conversion of sorted bam file to fasta following Gabriel's post on http://seqanswers.com/forums/archive/index.php/t-6169.html
@@ -56,10 +59,10 @@ grep --no-group-separator --no-filename *txt > file2
 apt-cache search <search_term>
 #Search term for Ubuntu packages that I always seem to forget... 
 
-"x=($(wc -l FILE.fasta))"
+"x=$(wc -l FILE.fasta)"
 #This makes an object 'x' that is the number of lines in a fasta file and echos this number
 
-y=($(grep ">" test.fasta | wc -l))
+y=$(grep ">" test.fasta | wc -l)
 #This makes an object y that is the number of sequences in a fasta file
 
 "x=1
@@ -98,4 +101,3 @@ do
 echo "$k" #commands, replacing $k with each successive number in your series.
 
 done
-
