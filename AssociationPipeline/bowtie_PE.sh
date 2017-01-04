@@ -2,11 +2,9 @@
 
 bowtie2-build -f ref.fasta ref
 
-ls *NoClones/*fq_1.gz > files1
-ls *NoClones/*fq_2.gz > files2
-paste files1 files2 > files
+paste <(ls *NoClones/*fq_1.gz) <(ls *NoClones/*fq_2.gz) > files
 
-W=($(wc -l files))
+W=$(wc -l < files)
 
 x=1
 while [ $x -le $W ] # "-le " refers to your sample size for the "while loop" (here: 96 samples which is the result of "wc -l files").

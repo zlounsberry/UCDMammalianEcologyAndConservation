@@ -29,11 +29,7 @@ do
         c1=$1 #the first variable (column 1 in files)
 	c2=$2 #second variable (column 2 in files) This script reads lines one at a time.
 
-ls ../trimmed_${c1}.fastq.nodup.bam > bam1
-echo "${c1}" > bam2
-echo "${c2}" > bam3
-paste bam1 bam2 bam3 >> bam.filelist
-rm bam1 bam2 bam3
+paste <(ls ../trimmed_${c1}.fastq.nodup.bam) <(echo "${c1}") <(echo "${c2}") >> bam.filelist
 
 x=$(( $x + 1 ))
 
