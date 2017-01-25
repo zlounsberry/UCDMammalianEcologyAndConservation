@@ -1,0 +1,7 @@
+Haplotype	CapeDyer	CapeKrusenstern	DeeringAlaska	KotzebueNWAlaska	StLawrenceIsland	OnionPortage	PointHope	PtBarrowAlaska	KodiakIsland
+A02	0	0	0	0	0	0	0	0	0
+A03	0	0	0	0	0	0	0	0	0
+A20	0	0	1	0	0	0	0	0	0
+A22	0	0	0	0	0	0	0	0	1
+A29	0	7	0	0	0	1	1	1	6
+A31	1	3	0	0	0	0	2	0	0
