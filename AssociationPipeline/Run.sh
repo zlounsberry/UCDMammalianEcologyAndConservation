@@ -1,92 +1,65 @@
-#./bowtie.sh # use this for Single End
-./bowtie_PE.sh # use this for paired end
+#!/bin/bash
+## Usage: ./Run.sh [paired=pe/single=se] [reference.fasta] [path to input file(s)] [path to output file(s)] [date you called SNPs as YEARMMDD] [name of project]
+#example: ./Run.sh pe CanFam3.fa "/InputPath/data" "bamfiles" 20170401 Cute_Puppy_SNP_Calling
+#requires: tab-delim 2-col file "samplefiles" with sample name (matches fastq file) and case (0) vs control (1) identifier
+#example:
+#Sample1	1
+#Sample2	1
+#Sample3	2
 
-############
+if ls | grep -q samplefiles; then
 
+Pairing=$1
+Reference=$2
+Path_To_Input=$3
+Output_Directory=$4
+Date_Of_SNP_Calling=$5
+Project_ID=$6
 
-W=($(wc -l samplefiles))
-GENE=$(echo "NODE")
-#THRESHOLD=$(echo "0.005") #ignore this for now...
+mkdir ${Output_Directory}
+bwa index ${Reference}
 
-#samplefiles is a 2-column, tab delimited file containing your sample IDs in column 1 and the disease state in column 2 (either the disease name or the word 'control')
-#Change the word COL8A in the variable above to the exact string that occurs in your samplefiles
-
-###########
-
-rm bam.filelist
-mkdir output
-
-x=1
-while [ $x -le $W ] # "-le " refers to your sample size for the "while loop" (here: 96 samples which is the result of "wc -l files").
-do
-
-      string="sed -n ${x}p samplefiles"
-
-        str=$($string)
-
-        var=$(echo $str | awk -F"\t" '{print $1, $2}')
-        set -- $var
-        c1=$1 #the first variable (column 1 in files)
-	c2=$2 #second variable (column 2 in files) This script reads lines one at a time.
-
-paste <(ls ../trimmed_${c1}.fastq.nodup.bam) <(echo "${c1}") <(echo "${c2}") >> bam.filelist
-
-x=$(( $x + 1 ))
-
+for Input in $(awk '{print $1}' samplefiles); do
+	if [[ ${Pairing} == "pe" ]]; then
+		./Align_To_Reference_pe.sh ${Reference} ${Path_To_Input} ${Input} ${Output_Directory}
+	else
+		if [[ ${Pairing} == "se" ]]; then
+			./Align_To_Reference_se.sh ${Reference} ${Path_To_Input} ${Input} ${Output_Directory}
+		else
+			echo "Sorry for the confusion, but you need to specify if your input fastq files are paired end 'pe' or single end 'se' (see usage)"
+		fi
+	fi
 done
 
-./readgroup.sh
+freebayes -f ${Reference} ${Output_Directory}/*bam | /usr/bin/vcflib/bin/vcffilter -f "QUAL > 20" | /usr/bin/vcflib/bin/vcfbreakmulti > ${Output_Directory}/${Date_Of_SNP_Calling}_${Project_ID}.vcf
+	#Use some options! They are too project-specific for me to generically include, but check out https://github.com/ekg/freebayes and also see what papers doing similar things are doing.
 
-./index.sh
+echo -e "FID\tIID\tpheno" > ${Output_Directory}/pheno.txt
 
-./freebayes.sh
-
-###################
-
-grep -e "#" -e "$GENE" ALL.vcf > ALL.vcf.$GENE
-#Here is where your DISEASE variable from the beginning is used!
-#Careful, this method ignores INDELs! Will be trying to fix that soon...
-
-###################
-
-/usr/bin/plink1.9/plink --vcf ALL.vcf.$GENE --allow-extra-chr --recode --noweb --out output/plink
-
-rm output/pheno.txt
-echo -e "FID\tIID\tpheno" > output/pheno.txt
+W=$(wc -l < samplefiles)
 
 x=1
-while [ $x -le $W ] # "-le " refers to your sample size for the "while loop" (here: 96 samples which is the result of "wc -l files").
+while [ $x -le $W ] 
 do
 
       string="sed -n ${x}p samplefiles"
 
         str=$($string)
 
-        var=$(echo $str | awk -F"\t" '{print $1, $2}')
+        var=$(echo $str | awk -F"\t" '{print $1, $2, $3}')
         set -- $var
-        c1=$1 #the first variable (column 1 in files)
-	c2=$2 #second variable (column 2 in files) This script reads lines one at a time.
-	c3=$3
+        Input=$1 #the first variable (column 1 in files)
+	Phenotype=$2 #second variable (column 2 in files) This script reads lines one at a time.
 
-if grep -Fw "${c1}" samplefiles | grep -iqFw "control" ; then
-	echo -e "${c1}\t${c1}\t1" >> output/pheno.txt
+echo -e "${Input}\t${Input}\t${Phenotype}" >> ${Output_Directory}/pheno.txt
+
+x=$(( $x + 1 ))
+done
+
+/usr/bin/plink1.9/plink --vcf ${Output_Directory}/${Date_Of_SNP_Calling}_${Project_ID}.vcf --pheno ${Output_Directory}/pheno.txt --assoc --allow-no-sex --double-id --recode tab --allow-extra-chr --out ${Output_Directory}/${Date_Of_SNP_Calling}_${Project_ID}
+
+cat <(head -n1 ${Output_Directory}/${Date_Of_SNP_Calling}_${Project_ID}.assoc) <(awk '$9<0.05' ${Output_Directory}/${Date_Of_SNP_Calling}_${Project_ID}.assoc) > ${Output_Directory}/${Date_Of_SNP_Calling}_${Project_ID}.Filtered.assoc
+
 else
-	echo -e "${c1}\t${c1}\t2" >> output/pheno.txt
+	echo 'please check that there is a file called "samplefiles" in your current directory and try again'
 fi
-
-x=$(( $x + 1 ))
-
-done
-
-./plink.sh
-
-###########################
-
-awk '$9<0.005' output/output.assoc > output/output.filtered.cutoffPvalue.$GENE.assoc
-mv output/output.assoc output/output.$GENE.assoc
-#Change 0.001 to a value to pull P values less than that value. 
-
-##########################
-
-mkdir $GENE
-mv output $GENE
