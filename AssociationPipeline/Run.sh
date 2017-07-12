@@ -1,5 +1,5 @@
 #!/bin/bash
-## Usage: ./Run.sh [paired=pe/single=se] [reference.fasta] [path to input file(s)] [path to output file(s)] [date you called SNPs as YEARMMDD] [name of project]
+##Usage: ./Run.sh [paired=pe/single=se] [reference.fasta] [path to input file(s)] [path to output file(s)] [date you called SNPs as YEARMMDD] [name of project]
 #example: ./Run.sh pe CanFam3.fa "/InputPath/data" "bamfiles" 20170401 Cute_Puppy_SNP_Calling
 #requires: tab-delim 2-col file "samplefiles" with sample name (matches fastq file) and case (0) vs control (1) identifier
 #example:
@@ -17,7 +17,13 @@ Date_Of_SNP_Calling=$5
 Project_ID=$6
 
 mkdir ${Output_Directory}
-bwa index ${Reference}
+
+if ls ${Reference}* | grep -q ${Reference}.bwt; then
+	echo "There is already a bwa reference for this, continuing"
+else
+	echo "There is not already a bwa reference for this, creating one"
+	bwa index ${Reference}
+fi
 
 for Input in $(awk '{print $1}' samplefiles); do
 	if [[ ${Pairing} == "pe" ]]; then
@@ -31,7 +37,7 @@ for Input in $(awk '{print $1}' samplefiles); do
 	fi
 done
 
-freebayes -f ${Reference} ${Output_Directory}/*bam | /usr/bin/vcflib/bin/vcffilter -f "QUAL > 20" | /usr/bin/vcflib/bin/vcfbreakmulti > ${Output_Directory}/${Date_Of_SNP_Calling}_${Project_ID}.vcf
+freebayes -f ${Reference} ${Output_Directory}/*bam | /usr/bin/vcflib/bin/vcffilter -f "QUAL > 15" | /usr/bin/vcflib/bin/vcfbreakmulti > ${Output_Directory}/${Date_Of_SNP_Calling}_${Project_ID}.vcf
 	#Use some options! They are too project-specific for me to generically include, but check out https://github.com/ekg/freebayes and also see what papers doing similar things are doing.
 
 echo -e "FID\tIID\tpheno" > ${Output_Directory}/pheno.txt
