@@ -1,6 +1,7 @@
+#Thanks to (not-yet-Dr.-as-of-13-July-2017) Jen Brazeal for help with improvements
+
 setwd("V:/3730Data/377STRs/Wildlife/R Scripts/R Stuff/Allelematch")
 library(allelematch)				
-				
 				
 data = as.data.frame(read.table("file.txt", header = T, sep = "\t")) #Reads file.txt as the focal dataset
 Data = amDataset(data, missingCode = "-99", indexColumn = 1, metaDataColumn = NULL) #Makes the amDataset formatted object for analysis
@@ -18,4 +19,4 @@ amCSV.amPairwise(unclassified , "outputAllelematchJBL.csv")
 
 amUniqueProfile(Data, guessOptim=T,consensusMethod=1)
 Output = amPairwise(Data, alleleMismatch = 5) #Makes an amPairwise formatted object for output (alleleMismatch = number from amUniqueProfile graph)
-amCSV.amPairwise(Output, "outputAllelematch.csv") 			
+amCSV.amPairwise(Output, "outputAllelematch.csv")
