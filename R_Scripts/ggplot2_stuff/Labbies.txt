@@ -1,8 +1,0 @@
-Names	Height	Eye Color	Study System	Education	No. Pubs
-Zach	62	Brown	Deer	MS	1
-MaryJo	53	Brown	Deer	BS	0
-Sarah	54	Green	Dog	PhD	3
-Ben	56	Brown	Fox	PhD	41
-Mark	63	Green	Fox	PhD	6
-Sini	54	Brown	Dog	BS	0
-Kat	53	Brown	Fox	BS	0
