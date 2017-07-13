@@ -1,126 +1,103 @@
-setwd("V:/3730Data/377STRs/Wildlife/R Scripts/R Stuff/ConsensusGenotypeMaker")
+#Thanks to (not-yet-Dr.-as-of-13-July-2017) Cate Brown-Quinn for her greater-than-my contribution to this script.
 
+##########INPUT SECTION, REQUIRES CHANGES##########
 
-#########Change the stuff here to fit your data#############
+##Read in focal dataset (2 column format, tab separated!)
+data_full = read.table("file.txt", header = T, sep = "\t")
 
-data = as.data.frame(read.table("testfile3.txt", header = T, sep = "\t")) 
-	##Reads in focal dataset (2 column format, tab separated!)
-
+##Put your missing data value here (I like  -99)
 missingValue = -99 
-	##Put your missing data value here (I like -99)
 
-startcol = 2 
-	 ##This is the column that the first allele of the first locus occurs in.
+##Column that the first allele of the first locus occurs in.
+startcol = 2
+##Column that sample identifier (e.g. S15-2333) is in.
+id = 1
+
+##########END OF INPUT SECTION##########
+#truncate full dataframe so that it is just an id column and genotype 
+  data = data_full[,c(id,startcol:ncol(data_full))]
+  #now need to reassign startcol and id
+  startcol = 2
+  id = 1
 
 ####DON'T CHANGE ANYTHING BELOW HERE####
 
+##Create a vector that indexes the start column for every locus
+  #length(columns) returns your number of loci
 columns = seq(startcol,ncol(data),2)
-	##Creates an object that tells the function how many loci you have.
-	##You can use length(columns) to check that this is correct. It should return your number of loci
 
-names=as.character(sort(unique(data[,1]))) 
-	#This creates an object (class: character) of the unique sample names in a file
+##Creates a vector of the unique sample names in a file
+  #length(names) is the number of samples you have
+names=as.character(sort(unique(data[,id]))) 
+
+##Create a blank final dataframe that eventually will hold all of your consensus genotypes 
+final = data.frame(matrix(NA, nrow=length(names), ncol=ncol(data)))
+names(final) = names(data)
 
 
-MakeCons = function(x, print = T){ 
-	##Makes the function to call x, which we will feed to lapply such that x is every sample name (see below)
+######Run loop...######
 
-numbers = which(data[,1] == x) 
-	##Finds which lines in the object "data" (your txt file as a data frame) contain the unique sample identifier
-
-genotype=as.data.frame(data[numbers[1],])
-	##Initializes your data frame (an object called 'genotype') as the first occurrence (full row) containing your sample name that is being run
-  
-for(i in numbers[2:length(numbers)])
-{
-	##Initializes your loop to find the remaining occurrences of rows containing your sample name (all occurrences after the first occurrence that was used to initialize the data frame)
-
-obj=as.data.frame(data[i,])
-	##Creates an object that is the genotype for the ith occurrence (replicate) of your sample ID 
-
-genotype=rbind(genotype, obj)
-}
-	##Iteratively adds each new row (object called 'obj' changes with every value of i) containing a replicate to the object 'genotype'
-
-for(i in 1:nrow(genotype)) 
-{
-	##Initializes a loop to run on the genotype object made above (which is all of your replicates of that sample name)
-
-genotypes=as.data.frame(x)
-	##Creates a new object called 'genotypes' that will end up as the consensus sequence for sample x
+#i is a loop that walks through each unique sample identifier....
+for (i in 1:length(names))  {
+    x = names[i]
+##creates a dataframe called "replicates" that subsets the data to only those that match the given sample ID
+    replicates = data[which(data[,id]==x),]
+  ##creates a temporary blank dataframe called genotype that will eventually contain the consensus genotype for this sample
+    genotype = data.frame(matrix(NA, nrow=1, ncol=ncol(replicates)))
+    #add in sample id and column names
+    genotype[,id] = replicates[1,id]
+    names(genotype) = names(replicates)
  
-for(j in columns) 
-{
-	##starts the loop that will take occurrences of each unique alleles and collapse them to a 1 or 2-locus genotype
-
-	if(length(sort(unique(c(genotype[,j],genotype[,j+1]))))>=2) {
-		## "if the number of unique alleles (INCLUDING YOUR MISSINGVALUE) in columns j and j+1 (i.e., the jth locus) for all replicates is greater than 2..."
-
-		obj1=sort(unique(c(genotype[,j],genotype[,j+1])))
-			## "...then collapse them into just unique values..."
-
-		obj1=obj1[obj1 != missingValue ]
-			## "... and remove the missingValue"
-
-	} else {
-		obj1=(sort(unique(c(genotype[,j],genotype[,j+1]))))
-	}
-	if(length(obj1)==1){
-		obj1=c(obj1,obj1)
-	} 
-genotypes=as.data.frame(c(genotypes,obj1))
-}
-}
-print(genotypes)
-}
-
-test = lapply(names, MakeCons)
-test = sapply(names, MakeCons)
-
-writeLines(unlist(lapply(test, paste)))
-writeLines(unlist(lapply(test, paste, collapse="\t")))
-
-#############ABOVE THIS IS THE FINAL SCRIPT###############################
-
-
-
-#############BELOW THIS IS THE WORKING SCRIPT###############################
-
-data = as.data.frame(read.table("testfile3.txt", header = T, sep = "\t")) #Reads in focal dataset (2 column format, tab separated!)
-missingValue = -99 # This is the value for missing data in your file
-startcol = 2 # This is the column that the first allele of the first locus occurs in.
-
-columns = seq(startcol,ncol(data),2)
-names=sort(unique(data[,1])) # This creates an object (class factor) of the unique sample names in a file
-names=as.character(sort(unique(data[,1]))) # This creates an object (class factor) of the unique sample names in a file
-
-final=colnames(data)
-MakeCons = function(x, print = T){ #make the
-numbers = which(data[,1] == x)
-genotype=as.data.frame(data[numbers[1],])  
-for(i in numbers[2:length(numbers)])
-{
-obj=as.data.frame(data[i,])
-genotype=rbind(genotype, obj)
-}
-for(i in 1:nrow(genotype)) 
-{
-genotypes=as.data.frame(x) 
-for(j in columns) 
-{
-	if(length(sort(unique(c(genotype[,j],genotype[,j+1]))))>=2) {
-		obj1=sort(unique(c(genotype[,j],genotype[,j+1])))
-		obj1=obj1[obj1 != missingValue ]
-	} else {
-		obj1=(sort(unique(c(genotype[,j],genotype[,j+1]))))
-	}
-	if(length(obj1)==1){
-		obj1=c(obj1,obj1)
-	} 
-genotypes=as.data.frame(c(genotypes,obj1))
-}
-}
+##nested within this loop is a j loop that for each locus j, will take occurrences of  unique alleles and collapse them to a 1 or 2-locus genotype
+    for(j in columns) {
+      #create a temporary object with only unique values, and remove missingValue 
+      temp = sort(unique(c(replicates[,j],replicates[,j+1])))
+      temp = temp[temp != missingValue] 
+      
+      ## "if the number of unique alleles (NOT INCLUDING YOUR missingValue) in columns j and j+1 (i.e., the jth locus) for all replicates is greater than 2..."
+      if(length(temp)>2) {
+        #...assing dummy values to indicate there is a false allele here... 
+        obj1 = c("-666","-666")
+        #...and assign these values to the corresponding locus in the genotype object
+        genotype[,c(j,j+1)] = obj1 
+        
+      ##but if there are <2 unique values NOT INCLUDING your missingValue
+      }  else {
+        ## "1) if the number of unique alleles (INCLUDING YOUR MISSINGVALUE) in columns j and j+1 (i.e., the jth locus) for all replicates is greater than 2..."
+        if(length(sort(unique(c(replicates[,j],replicates[,j+1]))))>=2) {
+          ## "...then collapse them into just unique values..."
+          obj1 = sort(unique(c(replicates[,j],replicates[,j+1])))
+          ## "... and remove the missingValue"
+          obj1=obj1[obj1 != missingValue ]
+        ## "...and assign to appropriate columns in genotype object
+        }
+        ## but if there are 2 or less unique alleles (INCLUDING YOUR MISSINGVALUE)...
+        else {
+          ## then set obj 1 equal to them
+        obj1=(sort(unique(c(replicates[,j],replicates[,j+1]))))
+        }
+          #and if obj1 has only 1 unique allele... (eg homozygote)
+        if(length(obj1)==1){
+          #repeat it two times
+        obj1=c(obj1,obj1)
+        }
+      }     
+      #...and finally assign obj 1 to appropriate columns in genotype object
+      genotype[,c(j,j+1)] = obj1 
+    }
+      final[i,] = genotype
+      final[,1] = names 
 }
 
-test = lapply(names, MakeCons)
+    
+#can print to .txt file with this command
+#write.table(final, "test.txt", sep="\t", row.names=F)
 
+####OR
+
+#can o add a column identifying these as consensus genotypes
+final = cbind("consensus"="consensus", final)
+#....and combine with original data of all replicates
+all = rbind(cbind("consensus"="replicates", data), final)
+#and then export as a tab-delimited txt file
+write.table(all, "Consensus_Genotypes.txt", sep="\t", row.names=F, quote=F)
