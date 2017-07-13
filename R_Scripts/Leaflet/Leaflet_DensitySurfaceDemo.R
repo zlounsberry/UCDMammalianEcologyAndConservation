@@ -1,4 +1,3 @@
-setwd("V:\\3730Data\\377STRs\\Wildlife\\R Scripts\\R Stuff\\Leaflet")
 library(shiny)
 library(leaflet)
 library(spatstat)
@@ -10,7 +9,7 @@ library(maptools)
 
 ###First, let's make a simple map with points representing made-up species data for 3 cities in CA:
 
-FakeCluster=read.csv("./FakeData.csv", header=T)
+FakeCluster=read.csv("FakeData.csv", header=T)
 
 server = function(input, output) { #Makes your server object for interactive data
   points = eventReactive(input$var, { #Specifies the points that each interactive value will produce on your map
@@ -40,8 +39,6 @@ ui = fluidPage(titlePanel("Where are my target species?"), leafletOutput("mymap"
 
 shinyApp(ui, server) #run it! Should host an html object in your web browser of choice. If this browser is IE, reconsider.
   
-  
-
 
 ###Well, those are all the same, so how about we change the colors for each spp?
 
@@ -63,7 +60,7 @@ server = function(input, output) {
     FakeCluster=read.csv("./FakeData.csv", header=T) #Read in data again (still not 100% you have to do this every time, but I think it wasn't working for me when I didn't...)
     Species=input$var
     SpeciesColumn=which(colnames(FakeCluster)==Species)
-    colors=c("black","green","purple","white","red","pink","yellow") #addCircles doesn't seem to like string.to.color's hex output, so I am making them by hand...
+    colors=c("black","green","purple","white","red","pink","yellow") #addCircles doesn't seem to like string.to.colors's hex output, so I am making them by hand...
     colors[SpeciesColumn] #This takes the SpeciesColumn'th value in the color object and makes "col1()" represent that color, which is now reactive to your spp of interest.
     })
   output$mymap <- renderLeaflet({
@@ -105,7 +102,7 @@ server = function(input, output) {
     FakeCluster=read.csv("./FakeData.csv", header=T) #Read in data again (still not 100% you have to do this every time, but I think it wasn't working for me when I didn't...)
     Species=input$var
     SpeciesColumn=which(colnames(FakeCluster)==Species)
-    colors=c("","","black","green","purple","white","red","pink","yellow") #addCircles doesn't seem to like string.to.color's hex output, so I am making them by hand...
+    colors=c("","","black","green","purple","white","red","pink","yellow") #addCircles doesn't seem to like string.to.colors's hex output, so I am making them by hand...
     colors[SpeciesColumn] #This takes the SpeciesColumn'th value in the color object and makes "col1()" represent that color, which is now reactive to your spp of interest.
   })
     Raster = eventReactive(input$var, { #time to make a raster layer!
@@ -131,7 +128,7 @@ server = function(input, output) {
       FakeCluster=read.csv("./FakeData.csv", header=T)
       Species=input$var
       SpeciesColumn=which(colnames(FakeCluster)==Species)
-      colors=string.to.color(colnames(FakeCluster[1:8])) #Raster is cool with hex codes, so string.to.color works here
+      colors=string.to.colors(colnames(FakeCluster[1:8])) #Raster is cool with hex codes, so string.to.colors works here
       col1 = colors[SpeciesColumn] #The SpeciesColumn'th color
       colorRampPalette(c("transparent", col1), alpha=T)( 100 ) #Define col() as the color ranging from transparent (for low/missing density, so the whole map isn't covered...) to your predefined colors.
     })
@@ -200,7 +197,7 @@ server = function(input, output) {
     FakeCluster=read.csv("./FakeData.csv", header=T)
     Species=input$var
     SpeciesColumn=which(colnames(FakeCluster)==Species)
-    colors=string.to.color(colnames(FakeCluster[1:8]))
+    colors=string.to.colors(colnames(FakeCluster[1:8]))
     col1 = colors[SpeciesColumn]
     colorRampPalette(c("transparent", col1), alpha=T)( 100 )
   })
@@ -208,7 +205,7 @@ server = function(input, output) {
     FakeCluster=read.csv("./FakeData.csv", header=T)
     Species=input$var
     SpeciesColumn=which(colnames(FakeCluster)==Species)
-    colors=string.to.color(colnames(FakeCluster[1:8]))
+    colors=string.to.colors(colnames(FakeCluster[1:8]))
     colors[SpeciesColumn]
   })
   output$mymap <- renderLeaflet({
@@ -227,66 +224,3 @@ ui = fluidPage(titlePanel("Mysterious Dots and Surfaces?"), leafletOutput("mymap
                                          choices = colnames(FakeCluster[4:8]))))
 
 shinyApp(ui, server)
-
-
-#############################################################################
-
-##"Cool" you are probably thinking to yourself... "But how do I do this with real data??"
-##See: below... sorry, not quite annotated yet...
-
-
-setwd("V:\\3730Data\\377STRs\\Wildlife\\R Scripts\\R Stuff\\Leaflet")
-library(leaflet)
-library(shiny)
-library(spatstat)
-library(raster)
-library(rgdal)
-library(fifer)
-
-MeanClusterByGeography=read.csv("SacValleyFoxes.csv", header=T)
-colors=string.to.color(colnames(MeanClusterByGeography[4:10]))
-col=colorRampPalette(c("transparent", "black"), alpha=T)( 70 )
-toVary=MeanClusterByGeography[,10]
-longRange = MeanClusterByGeography$Lon
-latRange = MeanClusterByGeography$Lat
-Dens = data.frame(longRange,latRange,toVary, row.names=MeanClusterByGeography[,2])
-xWin=owin(c(-179,179),c(-89,89))
-pts <- as.ppp(Dens,W=xWin)
-
-
-
-#tiles: http://leaflet-extras.github.io/leaflet-providers/preview/
-leaflet(Dens) %>% 
-  setView(-121,38,6) %>%
-  addTiles('http://korona.geog.uni-heidelberg.de/tiles/roads/x={x}&y={y}&z={z}', 
-           attribution='Imagery from <a href="http://giscience.uni-hd.de/">GIScience Research Group @ University of Heidelberg</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>') %>%
-  addCircles(~longRange, ~latRange, weight = 6, radius=40, 
-             color="blue", stroke = TRUE, fillOpacity = 0.5) 
-
-shinyApp(
-  ui = fluidPage(titlePanel("Species Sightings in the Valley"), leafletOutput("mymap"),
-                 sidebarLayout(sidebarPanel(helpText("Please Select a species of interest")),
-                               selectInput("var",label = "Species",
-                                           choices = as.vector(unique(MeanClusterByGeography[,10]))))),
-  server = function(input, output) {
-    points = eventReactive(input$var, {
-      MeanClusterByGeography=read.csv("SacValleyFoxes.csv", header=T)
-      Species=input$var
-      SpeciesRow = which(MeanClusterByGeography[,10]==Species)
-      Dens = MeanClusterByGeography[SpeciesRow,]
-      Dens
-    })
-    col1 = eventReactive(input$var, {
-      MeanClusterByGeography=read.csv("SacValleyFoxes.csv", header=T)
-      Species=input$var
-      colors = string.to.color(as.vector(unique(MeanClusterByGeography[,10])))
-      colors[which(as.vector(unique(MeanClusterByGeography[,10]))==Species)]
-    })
-    output$mymap <- renderLeaflet({
-      leaflet() %>% 
-        setView(-121,38,6) %>%
-        addTiles('http://korona.geog.uni-heidelberg.de/tiles/roads/x={x}&y={y}&z={z}', 
-                 attribution='Imagery from <a href="http://giscience.uni-hd.de/">GIScience Research Group @ University of Heidelberg</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>') %>% 
-        addMarkers(data=points(), popup = ~paste(sep="","Lat = ",Lat,", Long = ",Lon, ", Collector = ",Collector)) #Consider making this "collected by... variable"
-    })
-  })
