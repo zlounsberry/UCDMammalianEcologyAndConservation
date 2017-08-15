@@ -87,9 +87,10 @@ x=$(( $x + 1 ))
 
 done
 
-Useful loop for just numbers - for example numbers 13 to 63 in intervals of 10:
-
+#Useful loop for just numbers - for example numbers 13 to 63 in intervals of 10:
 for k in $(seq 13 10 63); do
 	echo "$k" #commands, replacing $k with each successive number in your series. Also as a style point, indent within loops. Your friends will thank you.
 done
 
+#Get per-sample depth stats in a vcf file, output will be PREFIX.idepth
+vcftools --vcf FILENAME.vcf --out PREFIX --depth
