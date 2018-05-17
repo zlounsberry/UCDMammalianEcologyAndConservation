@@ -1,70 +1,99 @@
 #!/bin/bash
-##Some variables to make this easy to execute
+set -x
+##Check to make sure your data are in the format I use here (i.e., how it comes back to me from UCD genome center...). If not, make changes to the input.
+##IMPORTANT: If you have multiple files with the same name/prefix, this script will break. That's bad practice, IMHO. Please at least do like sample1_1 and sample1_2 next time.
+##Usage: ./Run.sh [paired=pe/single=se] [reference.fasta] [path to input file(s)] [path to output file(s)] [date you called SNPs as YEARMMDD] [name of project]
+#example: ./Run.sh pe CanFam3.fa "/InputPath/data" "bamfiles" 20170401 Cute_Puppy_SNP_Calling
 
-#Example usage: ./ExampleWorkflow.sh PATHTORAW reference.fasta
+Pairing=$1
+Reference=$2
+Path_To_Input=$3
+Output_Directory=$4
+Date_Of_SNP_Calling=$5
+Project_ID=$6
 
-PathToRawData=$1
-ReferenceFasta=$2
+mkdir ${Output_Directory}
 
-##I'll update this as I get smarter... Seems to happen rapidly at this stage.
+##Check if a BWA reference is already present. If not, make one.
+if ls ${Reference}* | grep -q ${Reference}.bwt; then
+	echo "There is already a bwa reference for this, continuing"
+else
+	echo "There is not already a bwa reference for this, creating one"
+	bwa index ${Reference}
+fi
 
-##Things you will need (all free! don't pay for your software):
-#fastq-multx ($git clone https://github.com/brwnj/fastq-multx)
-#bowtie2 ($sudo apt-get install bowtie2)
-#samtools ($sudo apt-get install samtools)
-#Trimmomatic ($wget http://www.usadellab.org/cms/uploads/supplementary/Trimmomatic/Trimmomatic-0.33.zip, unpack and install or move the .jar file into your PATH)
-#Alternatively, ngsShort (http://research.bioinformatics.udel.edu/genomics/ngsShoRT/)
-#Tablet ($wget http://bioinf.hutton.ac.uk/tablet/installers/tablet_linux_x64_1_14_10_21.sh, and running this shell script will open Tablet depending on your settings...)
+##Get a list of your files. This is the bit that you may need to change depending on your data
+if [[ ${Pairing} == "pe" ]]; then
+	paste <(ls ${Path_To_Input}*R1*) <(ls ${Path_To_Input}*R2*) <(ls ${Path_To_Input}*R1* | sed 's/^.*[\/]//' | sed 's/.R1.*$//') > files.txt
+else
+	 if [[ ${Pairing} == "se" ]]; then
+		paste <(ls ${Path_To_Input}*R1*) <(ls ${Path_To_Input}*R1* | sed 's/^.*[\/]//' | sed 's/.R1.*$//') > files.txt
+	else
+		echo "Sorry for the confusion, but you need to specify if your input fastq files are paired end 'pe' or single end 'se' (see usage)"
+		exit 0
+	fi
+fi
 
-bowtie2-build -f $ReferenceFasta REF #This builds the reference library for Bowtie2 to read and align to.
-samtools faidx $ReferenceFasta #This will be needed to use this reference downstream (to view or whatever)
+##Counting the number of files you have, this loop will run on the file you created (files.txt)
 
-fastq-multx -B barcodes.fil $PathToRawData/*R1* $PathToRawData/*R2* -o %.R1.fastq.gz -o %.R2.fastq.gz # barcodes.fil is a file of barcodes and individuals that looks like the following (for a single barcode Illumina paired-end, n samples)
-#Sample1 (tab) Barcode1
-#Sample2 (tab) Barcode2
-#Sample3 (tab) Barcode3
-#...
-#Samplen (tab) Barcoden
+if [[ ${Pairing} == "pe" ]]; then
+	Lines=$(wc -l < files.txt)
+	x=1
+	while [ $x -le $Lines ]
+	do
+		string="sed -n ${x}p files.txt"
+	        str=$($string)
+	        var=$(echo $str | awk -F"\t" '{print $1, $2, $3}')
+	        set -- $var
+	        R1=$1 #the first variable (column 1 in files)
+		R2=$2 #second variable (column 2 in files) This script reads lines one at a time.
+		ID=$3 #you get the idea
 
-#NOTE THAT YOU HAVE TO RUN FASTQ MULTX ON EACH OF THE MULTIPLE FILES AND CONCATENATE THE RESULTS. IF YOUR SEQ CENTER SENT YOU BACK RAW, UNDEMULTIPLEXED FILES, YOU HAVE TO LOOP THIS.
-#For my own purposes, see the file remote/zach/Feb_CoyRAD/workflow2.sh. If you`re not me and for some reason you`re reading this, that file loops a loop and requires other scripts because I don't know programming. 
+		echo "Aligning ${Path_To_Input}/${Input}.fastq.gz to ${Reference}"
 
-#The following will generate BAM files for each of, in this case, 96 individuals. Just unhash the trimming software you want to use
+		bwa mem -R "@RG\tID:${ID}\tSM:${ID}" ${Reference} ${R1} ${R2} > ${Output_Directory}/${ID}.sam
+	        	#bwa with default parameters, just adding a readgroup to each sample
+		samtools view -F 4 -q 10 -bS ${Output_Directory}/${ID}.sam | samtools sort - ${Output_Directory}/${ID}
+		        #samtools: -F 4 flag tells it to remove unmapped reads; -q 10 tells it to remove reads that have a 0.1 likelihood to be mapped incorrectly (based on MAPQ score)
+		picard-tools MarkDuplicates I=${Output_Directory}/${ID}.bam O=${Output_Directory}/${ID}_nodup.bam M=Metrics
+		        #mark PCR clones
+		samtools rmdup ${Output_Directory}/${ID}_nodup.bam ${Output_Directory}/${ID}.bam
+		        #remove PCR clones (NOT recommended for GBS-type lanes!)
+		samtools index ${Output_Directory}/${ID}.bam
+		        #Index BAM file
+		rm ${Output_Directory}/${ID}_nodup.bam ${Output_Directory}/${ID}.sam
+		        #clean up temp files
+	x=$(( $x + 1 ))
+	done
+else
+	Lines=$(wc -l < files.txt)
+        x=1
+        while [ $x -le $Lines ]
+        do
+		string="sed -n ${x}p files.txt"
+		str=$($string)
+		var=$(echo $str | awk -F"\t" '{print $1, $2}')
+		set -- $var
+		R1=$1 #the first variable (column 1 in files)
+		ID=$2 #second variable (column 2 in files) This script reads lines one at a time.
 
-W=$(wc -l < barcodes.fil)
-mkdir trimmed
+	        bwa mem -R "@RG\tID:${ID}\tSM:${ID}" ${Reference} ${R1} > ${Output_Directory}/${ID}.sam
+	                #bwa with default parameters, just adding a readgroup to each sample
+	        samtools view -F 4 -q 10 -bS ${Output_Directory}/${ID}.sam | samtools sort - ${Output_Directory}/${ID}
+	                #samtools: -F 4 flag tells it to remove unmapped reads; -q 10 tells it to remove reads that have a 0.1 likelihood to be mapped incorrectly (based on MAPQ score)
+	        picard-tools MarkDuplicates I=${Output_Directory}/${ID}.bam O=${Output_Directory}/${ID}_nodup.bam M=Metrics
+	                #mark PCR clones; note this is a bad idea for reduced representation on SE data (e.g., GBS, RAD) because they all look like clones...
+	        samtools rmdup ${Output_Directory}/${ID}_nodup.bam ${Output_Directory}/${ID}.bam
+	                #remove PCR clones (NOT recommended for GBS-type lanes!)
+	        samtools index ${Output_Directory}/${ID}.bam
+        	        #Index BAM file
+	        rm ${Output_Directory}/${ID}_nodup.bam ${Output_Directory}/${ID}.sam
+	                #clean up temp files
 
-x=1
-while [ $x -le $W ]
-do
+	x=$(( $x + 1 ))
+	done
+fi
 
-      string="sed -n ${x}p barcodes.fil" #barcodes.fil is your file in the current working directory with a list of your samples names in the first column (as above). Below, '${c1}' will be replaced iteratively by sample names
+freebayes -f ${Reference} ${Output_Directory}/*bam | /usr/bin/vcflib/bin/vcffilter -f "QUAL > 15" > ${Output_Directory}/${Date_Of_SNP_Calling}_${Project_ID}.vcf
+	#Use some options! They are too project-specific for me to generically include, but check out https://github.com/ekg/freebayes and also see what papers doing similar things are doing.
 
-        str=$($string)
-
-        var=$(echo $str | awk -F"\t" '{print $1}')
-        set -- $var
-        c1=$1
-
-##You can use ngsShort (I like it)
-perl ngsShoRT.pl -se ${c1}.R1.fastq.gz -5a_f i-m -o ./trimmed -methods lqr_5adpt_tera-gzip #SingleEnd
-perl ngsShoRT.pl -pe1 ${c1}.R1.fastq.gz -pe2 ${c1}.R2.fastq.gz -5a_f i-m -lqs 25 -o ./trimmed -methods lqr_5adpt_tera-gzip #PairedEnd
-bowtie2 -x REF --no-unal --sensitive -1 trimmed/trimmed_${c1}.R1.fastq.gz -2 trimmed/trimmed_${c1}.R2.fastq.gz -U ${c1}.unpaired.fastq.gz -S ${c1}.sam
-
-##You can also use TRIMMOMATIC, which a lot of people use.
-#java -jar PATH/trimmomatic-0.33.jar PE -phred33 ${c1}.R1.fastq.gz ${c1}.R2.fastq.gz ${c1}.R1.paired.fastq.gz ${c1}.R1.unpaired.fastq.gz ${c1}.R2.paired.fastq.gz ${c1}.R2.unpaired.fastq.gz SLIDINGWINDOW:4:15 MINLEN:40
-#zcat ${c1}.R1.unpaired.fastq.gz ${c1}.R2.unpaired.fastq.gz > ${c1}.unpaired.fastq #concatenates the read1 and read2 unpaired files into a single file
-#bowtie2 -x REF --no-unal --sensitive -1 ${c1}.R1.paired.fastq.gz -2 ${c1}.R2.paired.fastq.gz -U ${c1}.unpaired.fastq -S ${c1}.sam
-
-samtools view -bS ${c1}.sam | samtools sort - ${c1} # Convert SAM to BAM format and sort the BAM file.
-picard-tools MarkDuplicates I=${c1}.bam O=${c1}_nodup.bam M=Metrics
-samtools rmdup ${c1}_nodup.bam > ${c1}.nodup.bam #This line will remove duplicates from paired end reads. Add the -S flag if your reads are unpaired (this isn't great for single-end reads anyway, I think)
-samtools depth ${c1}.nodup.bam > ${c1}.depth.txt #This prints the per-site coverage for all covered sites to a text file
-samtools index ${c1}.nodup.bam #Index your bam file for viewing, etc.
-rm ${c1}.sam ${c1}.bam ${c1}_nodup.bam # Remove large SAM file and intermediate BAM files. Maybe one day I will pipe those if I can...
-
-x=$(( $x + 1 ))
-
-done
-
-#Now it never hurts to look at your BAM files in something like Tablet to make sure they make sense. Obviously you don't want to check every base of all assemblies, but visualizing your data is important!

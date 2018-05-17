@@ -45,7 +45,7 @@ echo -e "FID\tIID\tpheno" > ${Output_Directory}/pheno.txt
 W=$(wc -l < samplefiles)
 
 x=1
-while [ $x -le $W ] 
+while [ $x -le $W ]
 do
 
       string="sed -n ${x}p samplefiles"
